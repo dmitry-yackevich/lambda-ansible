@@ -1,0 +1,4 @@
+---
+
+lambda_sg_name: "{{ LB_SG_NAME }}"
+lambda_sg_subnets: "{{ LAMBDA_SG_SUBNETS }}"

@@ -1,0 +1,38 @@
+---
+- name: Dirty archive code to bundle.zip, need to fix
+  shell: cd code && zip -9 ../roles/lambda/files/bundle.zip client.cfg lambda_rds.py && cd site-packages && zip -r9 ../../roles/lambda/files/bundle.zip *
+
+- name: IAM role for lambda function
+  iam:
+    iam_type: role
+    name: LambdaRdsRole
+    state: present
+    trust_policy:
+      Version: '2012-10-17'
+      Statement:
+      - Action: sts:AssumeRole
+        Effect: Allow
+        Principal:
+          Service: lambda.amazonaws.com
+
+- name: Assign a policy called AWSLambdaVPCAccessExecutionRole to the LambdaRdsRole
+  iam_policy:
+    iam_type: role
+    iam_name: LambdaRdsRole
+    state: present
+    policy_name: 'AWSLambdaVPCAccessExecutionRole'
+    policy_document: 'roles/lambda/files/AWSLambdaVPCAccessExecutionRole.json'
+
+- name: AWS Lambda Function connected to RDS
+  lambda:
+    name: lambda_rds
+    description: lambda funtion show all tables from rds
+    state: present
+    zip_file: 'roles/lambda/files/bundle.zip'
+    runtime: 'python2.7'
+    role: "arn:aws:iam::{{ ANSIBLE_AWS_ACCOUNT_ID }}:role/LambdaRdsRole"
+    handler: 'lambda_rds.lambda_handler'
+    memory_size: 128
+    timeout: 5
+    vpc_subnet_ids: "{{ lambda_sg_subnets }}"
+    vpc_security_group_ids: "{{ lookup('get_sg_id_from_name', (vpc_region, lambda_sg_name)) }}"
